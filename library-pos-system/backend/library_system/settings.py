@@ -190,11 +190,14 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# Security settings for production
+# Security settings for production (Railway handles SSL)
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Don't force SSL redirect - Railway handles this
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    
+    # Trust Railway's proxy headers
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
