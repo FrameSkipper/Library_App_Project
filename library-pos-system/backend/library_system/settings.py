@@ -10,6 +10,30 @@ import dj_database_url
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Production: Use Railway PostgreSQL
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+    }
+else:
+    # Development: Use SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# Print for debugging (remove after fixing)
+print(f"DATABASE_URL exists: {bool(DATABASE_URL)}")
+if DATABASE_URL:
+    # Don't print the full URL (has password), just confirm it exists
+    print(f"Using PostgreSQL database")
+else:
+    print(f"Using SQLite database")
+
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your-dev-secret-key')
 
