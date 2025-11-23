@@ -11,10 +11,10 @@ router.register(r'reports', views.ReportViewSet)
 router.register(r'staff', views.StaffViewSet)
 
 urlpatterns = [
-    # JWT Authentication endpoints
+    path('', include(router.urls)),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # API endpoints
-    path('', include(router.urls)),
+    path('analytics/sales/', views.sales_analytics, name='sales-analytics'),
+    path('analytics/inventory/', views.inventory_analytics, name='inventory-analytics'),
+    path('analytics/customers/', views.customer_analytics, name='customer-analytics'),
 ]

@@ -25,7 +25,11 @@ def home(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('inventory.urls')),
+    
+    # JWT Authentication endpoints - MUST come before api/
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # API endpoints
+    path('api/', include('inventory.urls')),
 ]
