@@ -1,14 +1,28 @@
 // frontend/src/services/api.js
 import axios from 'axios';
-import { db } from '../utils/db';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Construct API base URL properly
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  
+  if (envUrl) {
+    // Ensure https:// protocol
+    const url = envUrl.startsWith('http') ? envUrl : `https://${envUrl}`;
+    // Ensure /api suffix
+    return url.endsWith('/api') ? url : `${url}/api`;
+  }
+  
+  return 'http://localhost:8000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
 console.log('🔧 Environment variables:', import.meta.env);
 
 // Create axios instance
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -86,27 +100,16 @@ export const authAPI = {
 // Books API
 export const booksAPI = {
   getAll: async (searchTerm = '') => {
-    try {
-      const response = await apiClient.get('/books/', {
-        params: searchTerm ? { search: searchTerm } : {},
-      });
-      // Handle both array and paginated responses
-      if (response.data.results) {
-        return response.data.results;
-      }
-      return Array.isArray(response.data) ? response.data : [];
-    } catch (error) {
-      // If offline, return cached data
-      if (!navigator.onLine) {
-        await db.init();
-        const cachedBooks = await db.getBooks();
-        console.log('Using cached books (offline mode)');
-        return cachedBooks;
-      }
-      throw error;
+    const response = await apiClient.get('/books/', {
+      params: searchTerm ? { search: searchTerm } : {},
+    });
+    // Handle both array and paginated responses
+    if (response.data.results) {
+      return response.data.results;
     }
+    return Array.isArray(response.data) ? response.data : [];
   },
-  
+
   getById: async (id) => {
     const response = await apiClient.get(`/books/${id}/`);
     return response.data;
@@ -175,7 +178,7 @@ export const transactionsAPI = {
     const response = await apiClient.get('/transactions/');
     return response.data.results || response.data;
   },
-  
+
   create: async (transactionData) => {
     const response = await apiClient.post('/transactions/', transactionData);
     return response.data;
@@ -192,27 +195,6 @@ export const transactionsAPI = {
     });
     return response.data;
   },
-  create: async (transactionData) => {
-    try {
-      const response = await apiClient.post('/transactions/', transactionData);
-      return response.data;
-    } catch (error) {
-      // If offline, save to pending transactions
-      if (!navigator.onLine) {
-        await db.init();
-        await db.savePendingTransaction(transactionData);
-        
-        // Register background sync
-        if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
-          const registration = await navigator.serviceWorker.ready;
-          await registration.sync.register('sync-transactions');
-        }
-        
-        throw new Error('Transaction saved offline. Will sync when online.');
-      }
-      throw error;
-    }
-  },
 };
 
 // Reports API
@@ -226,27 +208,6 @@ export const reportsAPI = {
 
   generateInventoryReport: async () => {
     const response = await apiClient.get('/reports/inventory_report/');
-    return response.data;
-  },
-};
-
-export const analyticsAPI = {
-  getSalesAnalytics: async (period = 'daily', days = 30) => {
-    const response = await apiClient.get('/analytics/sales/', {
-      params: { period, days },
-    });
-    return response.data;
-  },
-
-  getInventoryAnalytics: async () => {
-    const response = await apiClient.get('/analytics/inventory/');
-    return response.data;
-  },
-
-  getCustomerAnalytics: async (days = 30) => {
-    const response = await apiClient.get('/analytics/customers/', {
-      params: { days },
-    });
     return response.data;
   },
 };
