@@ -3,6 +3,8 @@ import axios from 'axios';
 import { db } from '../utils/db';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+console.log('🔧 API_BASE_URL:', API_BASE_URL);
+console.log('🔧 Environment variables:', import.meta.env);
 
 // Create axios instance
 const apiClient = axios.create({
