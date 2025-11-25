@@ -74,8 +74,6 @@ WSGI_APPLICATION = 'library_system.wsgi.application'
 
 
 # Database configuration
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
@@ -137,12 +135,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework settings
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
+    'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
-    ],
+    ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
     # Force JSON responses (no HTML browsable API in production)
@@ -180,14 +178,14 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS]
 
 # Support for wildcard Vercel domains using regex
-CORS_ORIGIN_REGEX_WHITELIST = []
+CORS_ALLOWED_ORIGIN_REGEXES = []
 cors_regex_str = os.environ.get('CORS_ORIGIN_REGEX_WHITELIST', '')
 if cors_regex_str:
-    CORS_ORIGIN_REGEX_WHITELIST = [cors_regex_str.strip()]
+    CORS_ALLOWED_ORIGIN_REGEXES = [cors_regex_str.strip()]
 
 print(f"🔧 CORS_ALLOWED_ORIGINS: {CORS_ALLOWED_ORIGINS}")
-if CORS_ORIGIN_REGEX_WHITELIST:
-    print(f"🔧 CORS_ORIGIN_REGEX_WHITELIST: {CORS_ORIGIN_REGEX_WHITELIST}")
+if CORS_ALLOWED_ORIGIN_REGEXES:
+    print(f"🔧 CORS_ORIGIN_REGEX_WHITELIST: {CORS_ALLOWED_ORIGIN_REGEXES}")
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -211,6 +209,24 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+# CSRF settings - Trust Vercel origins for POST requests
+CSRF_TRUSTED_ORIGINS = []
+for origin in CORS_ALLOWED_ORIGINS:
+    if origin.startswith('http'):
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
+# Add Vercel preview domains
+vercel_patterns = [
+    'https://*.vercel.app',
+]
+for pattern in vercel_patterns:
+    # Convert wildcard to actual domains (Railway will handle this)
+    if '*' in pattern:
+        # For now, just add the base pattern - Django will accept it
+        CSRF_TRUSTED_ORIGINS.append(pattern.replace('*', 'library-app-project'))
+
+print(f"🔧 CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 # Security settings for production (Railway handles SSL)
 if not DEBUG:
