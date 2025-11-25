@@ -179,7 +179,15 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 # Strip whitespace from each origin
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS]
 
+# Support for wildcard Vercel domains using regex
+CORS_ORIGIN_REGEX_WHITELIST = []
+cors_regex_str = os.environ.get('CORS_ORIGIN_REGEX_WHITELIST', '')
+if cors_regex_str:
+    CORS_ORIGIN_REGEX_WHITELIST = [cors_regex_str.strip()]
+
 print(f"🔧 CORS_ALLOWED_ORIGINS: {CORS_ALLOWED_ORIGINS}")
+if CORS_ORIGIN_REGEX_WHITELIST:
+    print(f"🔧 CORS_ORIGIN_REGEX_WHITELIST: {CORS_ORIGIN_REGEX_WHITELIST}")
 
 CORS_ALLOW_CREDENTIALS = True
 
