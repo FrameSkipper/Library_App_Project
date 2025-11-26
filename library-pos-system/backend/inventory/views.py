@@ -1,22 +1,28 @@
+"""
+Enhanced views.py with Analytics endpoints
+"""
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import Sum, Count, Avg, F, Q
+from django.utils import timezone
+from datetime import timedelta
 from .models import Book, Publisher, Transaction, TransactionDetail, Staff, Report
 from .serializers import BookSerializer, PublisherSerializer, TransactionSerializer, StaffSerializer, ReportSerializer
-from django.db.models import Sum, Count, Avg, F
-from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
-from datetime import datetime, timedelta
-from rest_framework.decorators import api_view
+
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
 
+
 class PublisherViewSet(viewsets.ModelViewSet):
     queryset = Publisher.objects.all()
     serializer_class = PublisherSerializer
     permission_classes = [IsAuthenticated]
+
 
 class TransactionViewSet(viewsets.ModelViewSet):
     queryset = Transaction.objects.all()
@@ -59,214 +65,255 @@ class TransactionViewSet(viewsets.ModelViewSet):
             print(f"✗ Error: {str(e)}")
             raise
 
+
 class StaffViewSet(viewsets.ModelViewSet):
     queryset = Staff.objects.all()
     serializer_class = StaffSerializer
     permission_classes = [IsAuthenticated]
+
 
 class ReportViewSet(viewsets.ModelViewSet):
     queryset = Report.objects.all()
     serializer_class = ReportSerializer
     permission_classes = [IsAuthenticated]
 
-@api_view(['GET'])
-def sales_analytics(request):
-    """
-    Advanced sales analytics with multiple time periods and metrics
-    """
-    period = request.query_params.get('period', 'daily')  # daily, weekly, monthly
-    days = int(request.query_params.get('days', 30))
-    
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    
-    # Base queryset
-    transactions = Transaction.objects.filter(
-        trans_date__gte=start_date,
-        trans_date__lte=end_date
-    )
-    
-    # Group by period
-    if period == 'daily':
-        trunc_func = TruncDate
-    elif period == 'weekly':
-        trunc_func = TruncWeek
-    else:
-        trunc_func = TruncMonth
-    
-    # Sales over time
-    sales_over_time = transactions.annotate(
-        period=trunc_func('trans_date')
-    ).values('period').annotate(
-        total_sales=Sum('total_amount'),
-        transaction_count=Count('trans_id'),
-        avg_transaction=Avg('total_amount')
-    ).order_by('period')
-    
-    # Top selling books
-    top_books = TransactionDetail.objects.filter(
-        trans__trans_date__gte=start_date
-    ).values(
-        'book__title',
-        'book__author',
-        'book__book_id'
-    ).annotate(
-        total_quantity=Sum('quantity'),
-        total_revenue=Sum('line_total')
-    ).order_by('-total_quantity')[:10]
-    
-    # Revenue by category/genre (if you have genres)
-    # This assumes you add a genre field to Book model
-    
-    # Staff performance
-    staff_performance = Transaction.objects.filter(
-        trans_date__gte=start_date
-    ).values(
-        'staff__name',
-        'staff__staff_id'
-    ).annotate(
-        total_sales=Sum('total_amount'),
-        transaction_count=Count('trans_id'),
-        avg_sale=Avg('total_amount')
-    ).order_by('-total_sales')
-    
-    # Overall metrics
-    overall = transactions.aggregate(
-        total_revenue=Sum('total_amount'),
-        total_transactions=Count('trans_id'),
-        avg_transaction_value=Avg('total_amount')
-    )
-    
-    # Calculate growth compared to previous period
-    prev_start = start_date - timedelta(days=days)
-    previous_period = Transaction.objects.filter(
-        trans_date__gte=prev_start,
-        trans_date__lt=start_date
-    ).aggregate(
-        total_revenue=Sum('total_amount'),
-        total_transactions=Count('trans_id')
-    )
-    
-    growth_rate = 0
-    if previous_period['total_revenue']:
-        growth_rate = ((overall['total_revenue'] or 0) - (previous_period['total_revenue'] or 0)) / previous_period['total_revenue'] * 100
-    
-    return Response({
-        'period': period,
-        'date_range': {
-            'start': start_date.isoformat(),
-            'end': end_date.isoformat()
-        },
-        'overall_metrics': {
-            **overall,
-            'growth_rate': round(growth_rate, 2),
-            'previous_period_revenue': previous_period['total_revenue']
-        },
-        'sales_over_time': list(sales_over_time),
-        'top_selling_books': list(top_books),
-        'staff_performance': list(staff_performance)
-    })
 
-
-@api_view(['GET'])
-def inventory_analytics(request):
+class AnalyticsViewSet(viewsets.ViewSet):
     """
-    Detailed inventory analytics
+    Analytics endpoints for dashboard charts and insights
     """
-    # Stock distribution
-    stock_distribution = {
-        'out_of_stock': Book.objects.filter(stock_qty=0).count(),
-        'low_stock': Book.objects.filter(stock_qty__gt=0, stock_qty__lt=5).count(),
-        'medium_stock': Book.objects.filter(stock_qty__gte=5, stock_qty__lt=20).count(),
-        'high_stock': Book.objects.filter(stock_qty__gte=20).count()
-    }
+    permission_classes = [IsAuthenticated]
     
-    # Inventory value by publisher
-    value_by_publisher = Book.objects.values(
-        'pub__name',
-        'pub__pub_id'
-    ).annotate(
-        total_books=Sum('stock_qty'),
-        total_value=Sum(F('stock_qty') * F('unit_price')),
-        avg_price=Avg('unit_price')
-    ).order_by('-total_value')
+    @action(detail=False, methods=['get'])
+    def inventory(self, request):
+        """
+        Get inventory analytics:
+        - Total books
+        - Total value
+        - Low stock items
+        - Books by publisher
+        """
+        try:
+            # Total books and value
+            books = Book.objects.all()
+            total_books = books.count()
+            total_value = sum(book.total_value for book in books)
+            
+            # Low stock items
+            low_stock_count = books.filter(stock_qty__lt=5).count()
+            low_stock_items = BookSerializer(
+                books.filter(stock_qty__lt=5)[:5], 
+                many=True
+            ).data
+            
+            # Books by publisher
+            books_by_publisher = []
+            for publisher in Publisher.objects.all():
+                pub_books = books.filter(pub=publisher)
+                books_by_publisher.append({
+                    'publisher': publisher.name,
+                    'count': pub_books.count(),
+                    'value': float(sum(book.total_value for book in pub_books))
+                })
+            
+            # Stock distribution
+            stock_ranges = [
+                {'range': '0-5', 'count': books.filter(stock_qty__lte=5).count()},
+                {'range': '6-20', 'count': books.filter(stock_qty__gt=5, stock_qty__lte=20).count()},
+                {'range': '21-50', 'count': books.filter(stock_qty__gt=20, stock_qty__lte=50).count()},
+                {'range': '50+', 'count': books.filter(stock_qty__gt=50).count()},
+            ]
+            
+            return Response({
+                'total_books': total_books,
+                'total_value': float(total_value),
+                'low_stock_count': low_stock_count,
+                'low_stock_items': low_stock_items,
+                'books_by_publisher': books_by_publisher,
+                'stock_distribution': stock_ranges,
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
-    # Price distribution
-    price_ranges = {
-        'under_10': Book.objects.filter(unit_price__lt=10).count(),
-        'between_10_25': Book.objects.filter(unit_price__gte=10, unit_price__lt=25).count(),
-        'between_25_50': Book.objects.filter(unit_price__gte=25, unit_price__lt=50).count(),
-        'over_50': Book.objects.filter(unit_price__gte=50).count()
-    }
+    @action(detail=False, methods=['get'])
+    def sales(self, request):
+        """
+        Get sales analytics:
+        - Sales by period (daily, weekly, monthly)
+        - Top selling books
+        - Revenue trends
+        """
+        try:
+            period = request.query_params.get('period', 'daily')
+            
+            # Calculate date range
+            now = timezone.now()
+            if period == 'daily':
+                start_date = now - timedelta(days=7)
+                date_format = '%Y-%m-%d'
+            elif period == 'weekly':
+                start_date = now - timedelta(weeks=12)
+                date_format = '%Y-W%W'
+            else:  # monthly
+                start_date = now - timedelta(days=365)
+                date_format = '%Y-%m'
+            
+            # Sales over time
+            transactions = Transaction.objects.filter(trans_date__gte=start_date)
+            
+            sales_by_date = {}
+            for trans in transactions:
+                date_key = trans.trans_date.strftime(date_format)
+                if date_key not in sales_by_date:
+                    sales_by_date[date_key] = {
+                        'date': date_key,
+                        'revenue': 0,
+                        'transactions': 0
+                    }
+                sales_by_date[date_key]['revenue'] += float(trans.total_amount)
+                sales_by_date[date_key]['transactions'] += 1
+            
+            sales_trend = sorted(sales_by_date.values(), key=lambda x: x['date'])
+            
+            # Top selling books
+            top_books = TransactionDetail.objects.values(
+                'book__title', 
+                'book__author'
+            ).annotate(
+                total_sold=Sum('quantity'),
+                revenue=Sum('line_total')
+            ).order_by('-total_sold')[:10]
+            
+            # Overall stats
+            total_revenue = transactions.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            total_transactions = transactions.count()
+            avg_transaction = total_revenue / total_transactions if total_transactions > 0 else 0
+            
+            return Response({
+                'sales_trend': sales_trend,
+                'top_books': list(top_books),
+                'total_revenue': float(total_revenue),
+                'total_transactions': total_transactions,
+                'avg_transaction_value': float(avg_transaction),
+                'period': period,
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
-    # Books needing restock
-    restock_needed = Book.objects.filter(
-        stock_qty__lt=5
-    ).values(
-        'book_id', 'title', 'author', 'stock_qty', 'unit_price', 'pub__name'
-    ).order_by('stock_qty')
+    @action(detail=False, methods=['get'])
+    def customer(self, request):
+        """
+        Get customer analytics:
+        - Transactions by customer
+        - Customer frequency
+        - Average purchase value
+        """
+        try:
+            # Get all transactions with customer names
+            transactions_with_customers = Transaction.objects.exclude(
+                Q(customer_name__isnull=True) | Q(customer_name='')
+            )
+            
+            # Customer stats
+            customer_data = {}
+            for trans in transactions_with_customers:
+                name = trans.customer_name
+                if name not in customer_data:
+                    customer_data[name] = {
+                        'name': name,
+                        'transactions': 0,
+                        'total_spent': 0,
+                        'last_purchase': None
+                    }
+                customer_data[name]['transactions'] += 1
+                customer_data[name]['total_spent'] += float(trans.total_amount)
+                if not customer_data[name]['last_purchase'] or trans.trans_date > customer_data[name]['last_purchase']:
+                    customer_data[name]['last_purchase'] = trans.trans_date
+            
+            # Sort by total spent
+            top_customers = sorted(
+                customer_data.values(), 
+                key=lambda x: x['total_spent'], 
+                reverse=True
+            )[:10]
+            
+            # Format dates
+            for customer in top_customers:
+                if customer['last_purchase']:
+                    customer['last_purchase'] = customer['last_purchase'].strftime('%Y-%m-%d')
+            
+            # Anonymous vs named customers
+            total_transactions = Transaction.objects.count()
+            named_transactions = transactions_with_customers.count()
+            anonymous_transactions = total_transactions - named_transactions
+            
+            return Response({
+                'top_customers': top_customers,
+                'total_customers': len(customer_data),
+                'named_transactions': named_transactions,
+                'anonymous_transactions': anonymous_transactions,
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
-    # Total inventory value
-    total_inventory = Book.objects.aggregate(
-        total_books=Sum('stock_qty'),
-        total_value=Sum(F('stock_qty') * F('unit_price')),
-        unique_titles=Count('book_id'),
-        avg_price=Avg('unit_price')
-    )
-    
-    return Response({
-        'stock_distribution': stock_distribution,
-        'value_by_publisher': list(value_by_publisher),
-        'price_distribution': price_ranges,
-        'restock_needed': list(restock_needed),
-        'total_inventory': total_inventory
-    })
-
-
-@api_view(['GET'])
-def customer_analytics(request):
-    """
-    Customer purchase patterns and analytics
-    """
-    days = int(request.query_params.get('days', 30))
-    start_date = datetime.now() - timedelta(days=days)
-    
-    # Transaction patterns by day of week
-    transactions = Transaction.objects.filter(trans_date__gte=start_date)
-    
-    # Books purchased together (basic market basket analysis)
-    # Find books that appear in the same transactions
-    from collections import defaultdict
-    co_purchases = defaultdict(int)
-    
-    transactions_with_details = Transaction.objects.filter(
-        trans_date__gte=start_date
-    ).prefetch_related('details__book')
-    
-    for transaction in transactions_with_details:
-        books = list(transaction.details.values_list('book__title', flat=True))
-        if len(books) > 1:
-            for i, book1 in enumerate(books):
-                for book2 in books[i+1:]:
-                    pair = tuple(sorted([book1, book2]))
-                    co_purchases[pair] += 1
-    
-    # Convert to list and sort
-    frequent_pairs = sorted(
-        [{'book1': pair[0], 'book2': pair[1], 'count': count} 
-         for pair, count in co_purchases.items()],
-        key=lambda x: x['count'],
-        reverse=True
-    )[:10]
-    
-    # Average items per transaction
-    avg_items = TransactionDetail.objects.filter(
-        trans__trans_date__gte=start_date
-    ).aggregate(
-        avg_items_per_transaction=Avg('quantity')
-    )
-    
-    return Response({
-        'frequent_pairs': frequent_pairs,
-        'avg_items_per_transaction': avg_items['avg_items_per_transaction']
-    })
+    @action(detail=False, methods=['get'])
+    def dashboard_summary(self, request):
+        """
+        Get quick summary stats for dashboard
+        """
+        try:
+            # Today's stats
+            today = timezone.now().date()
+            today_start = timezone.make_aware(timezone.datetime.combine(today, timezone.datetime.min.time()))
+            
+            today_transactions = Transaction.objects.filter(trans_date__gte=today_start)
+            today_revenue = today_transactions.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            
+            # This week's stats
+            week_start = today_start - timedelta(days=today.weekday())
+            week_transactions = Transaction.objects.filter(trans_date__gte=week_start)
+            week_revenue = week_transactions.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            
+            # This month's stats
+            month_start = today_start.replace(day=1)
+            month_transactions = Transaction.objects.filter(trans_date__gte=month_start)
+            month_revenue = month_transactions.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            
+            # Inventory stats
+            books = Book.objects.all()
+            low_stock_books = books.filter(stock_qty__lt=5).count()
+            total_inventory_value = sum(book.total_value for book in books)
+            
+            return Response({
+                'today': {
+                    'revenue': float(today_revenue),
+                    'transactions': today_transactions.count(),
+                },
+                'week': {
+                    'revenue': float(week_revenue),
+                    'transactions': week_transactions.count(),
+                },
+                'month': {
+                    'revenue': float(month_revenue),
+                    'transactions': month_transactions.count(),
+                },
+                'inventory': {
+                    'total_books': books.count(),
+                    'total_value': float(total_inventory_value),
+                    'low_stock_items': low_stock_books,
+                }
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
