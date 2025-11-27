@@ -1,26 +1,29 @@
 // frontend/src/services/api.js
 import axios from 'axios';
-import { db } from '../utils/db';
 
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  
-  if (envUrl) {
-    // Ensure https:// protocol
-    const url = envUrl.startsWith('http') ? envUrl : `https://${envUrl}`;
-    // Ensure /api suffix
-    return url.endsWith('/api') ? url : `${url}/api`;
+// Auto-detect API base URL
+function getApiBaseUrl() {
+  // Check environment variable first
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
   
+  // For production Vercel deployment, use Railway backend
+  if (window.location.hostname.includes('vercel.app')) {
+    return 'https://libraryappproject-production.up.railway.app/api';
+  }
+  
+  // For local development
   return 'http://localhost:8000/api';
-};
+}
 
 const API_BASE_URL = getApiBaseUrl();
 
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
+
 // Create axios instance
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -33,6 +36,7 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log('📤 API Request:', config.method.toUpperCase(), config.url, config.headers.Authorization ? '✓ Authenticated' : '⚠️ No token');
     return config;
   },
   (error) => Promise.reject(error)
@@ -40,8 +44,13 @@ apiClient.interceptors.request.use(
 
 // Response interceptor - handle token refresh
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ API Response:', response.config.method.toUpperCase(), response.config.url, response.status);
+    return response;
+  },
   async (error) => {
+    console.error('❌ API Error:', error.config?.method?.toUpperCase(), error.config?.url, error.response?.status);
+    
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -82,12 +91,15 @@ export const authAPI = {
     localStorage.setItem('access_token', access);
     localStorage.setItem('refresh_token', refresh);
     
+    console.log('✓ Login successful, tokens saved');
+    
     return response.data;
   },
 
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    console.log('✓ Logout successful, tokens cleared');
   },
 
   isAuthenticated: () => {
@@ -102,23 +114,18 @@ export const booksAPI = {
       const response = await apiClient.get('/books/', {
         params: searchTerm ? { search: searchTerm } : {},
       });
+      console.log('📚 Books loaded:', response.data);
       // Handle both array and paginated responses
       if (response.data.results) {
         return response.data.results;
       }
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      // If offline, return cached data
-      if (!navigator.onLine) {
-        await db.init();
-        const cachedBooks = await db.getBooks();
-        console.log('Using cached books (offline mode)');
-        return cachedBooks;
-      }
+      console.error('❌ Failed to load books:', error);
       throw error;
     }
   },
-  
+
   getById: async (id) => {
     const response = await apiClient.get(`/books/${id}/`);
     return response.data;
@@ -134,9 +141,10 @@ export const booksAPI = {
       pub_id: parseInt(bookData.pub_id) 
     };
     
-    console.log('Sending book data:', dataToSend);
+    console.log('📝 Creating book:', dataToSend);
     
     const response = await apiClient.post('/books/', dataToSend);
+    console.log('✓ Book created:', response.data);
     return response.data;
   },
 
@@ -150,14 +158,16 @@ export const booksAPI = {
       pub_id: parseInt(bookData.pub_id)
     };
     
-    console.log('Updating book data:', dataToSend); // Debug log
+    console.log('📝 Updating book:', dataToSend);
     
     const response = await apiClient.put(`/books/${id}/`, dataToSend);
+    console.log('✓ Book updated:', response.data);
     return response.data;
   },
 
   delete: async (id) => {
     const response = await apiClient.delete(`/books/${id}/`);
+    console.log('✓ Book deleted:', id);
     return response.data;
   },
 
@@ -170,13 +180,21 @@ export const booksAPI = {
 // Publishers API
 export const publishersAPI = {
   getAll: async () => {
-    const response = await apiClient.get('/publishers/');
-    // Django REST Framework returns paginated data with 'results' key
-    return response.data.results || response.data;
+    try {
+      const response = await apiClient.get('/publishers/');
+      console.log('🏢 Publishers loaded:', response.data);
+      // Django REST Framework returns paginated data with 'results' key
+      return response.data.results || response.data;
+    } catch (error) {
+      console.error('❌ Failed to load publishers:', error);
+      throw error;
+    }
   },
 
   create: async (publisherData) => {
+    console.log('📝 Creating publisher:', publisherData);
     const response = await apiClient.post('/publishers/', publisherData);
+    console.log('✓ Publisher created:', response.data);
     return response.data;
   },
 };
@@ -184,18 +202,32 @@ export const publishersAPI = {
 // Transactions API
 export const transactionsAPI = {
   getAll: async () => {
-    const response = await apiClient.get('/transactions/');
-    return response.data.results || response.data;
+    try {
+      const response = await apiClient.get('/transactions/');
+      console.log('💳 Transactions loaded:', response.data);
+      return response.data.results || response.data;
+    } catch (error) {
+      console.error('❌ Failed to load transactions:', error);
+      throw error;
+    }
   },
-  
+
   create: async (transactionData) => {
+    console.log('📝 Creating transaction:', transactionData);
     const response = await apiClient.post('/transactions/', transactionData);
+    console.log('✓ Transaction created:', response.data);
     return response.data;
   },
 
   getToday: async () => {
-    const response = await apiClient.get('/transactions/today/');
-    return response.data;
+    try {
+      const response = await apiClient.get('/transactions/today/');
+      console.log('✓ Today\'s transactions:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to load today\'s transactions:', error);
+      throw error;
+    }
   },
 
   getStats: async (period = 'daily') => {
@@ -203,27 +235,6 @@ export const transactionsAPI = {
       params: { period },
     });
     return response.data;
-  },
-  create: async (transactionData) => {
-    try {
-      const response = await apiClient.post('/transactions/', transactionData);
-      return response.data;
-    } catch (error) {
-      // If offline, save to pending transactions
-      if (!navigator.onLine) {
-        await db.init();
-        await db.savePendingTransaction(transactionData);
-        
-        // Register background sync
-        if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
-          const registration = await navigator.serviceWorker.ready;
-          await registration.sync.register('sync-transactions');
-        }
-        
-        throw new Error('Transaction saved offline. Will sync when online.');
-      }
-      throw error;
-    }
   },
 };
 
@@ -242,24 +253,58 @@ export const reportsAPI = {
   },
 };
 
+// Analytics API
 export const analyticsAPI = {
-  getSalesAnalytics: async (period = 'daily', days = 30) => {
-    const response = await apiClient.get('/analytics/sales/', {
-      params: { period, days },
-    });
-    return response.data;
-  },
-
-  getInventoryAnalytics: async () => {
-    const response = await apiClient.get('/analytics/inventory/');
-    return response.data;
-  },
-
   getCustomerAnalytics: async (days = 30) => {
-    const response = await apiClient.get('/analytics/customers/', {
-      params: { days },
-    });
-    return response.data;
+    try {
+      const response = await apiClient.get('/analytics/customers/', {
+        params: { days },
+      });
+      console.log('👥 Customer analytics loaded:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to load customer analytics:', error);
+      throw error;
+    }
+  },
+
+  getInventoryAnalytics: async (days = 30) => {
+    try {
+      const response = await apiClient.get('/analytics/inventory/', {
+        params: { days },
+      });
+      console.log('📦 Inventory analytics loaded:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to load inventory analytics:', error);
+      throw error;
+    }
+  },
+
+  getSalesAnalytics: async (days = 30) => {
+    try {
+      const response = await apiClient.get('/analytics/sales/', {
+        params: { days },
+      });
+      console.log('💰 Sales analytics loaded:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to load sales analytics:', error);
+      throw error;
+    }
+  },
+
+  getSalesPerPeriod: async (period = 'daily', days = 30) => {
+    try {
+      const response = await apiClient.get('/analytics/per_period/', {
+        params: { period, days },
+      });
+      console.log('📊 Sales per period loaded:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to load sales per period:', error);
+      throw error;
+    }
   },
 };
 
