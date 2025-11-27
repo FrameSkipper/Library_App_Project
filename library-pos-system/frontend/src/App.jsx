@@ -1,4 +1,4 @@
-// frontend/src/App.jsx - Mobile-Optimized Version
+// frontend/src/App.jsx - Fixed Mobile Version
 import React, { useState, useEffect } from 'react';
 import { Menu, X, BarChart3, Package, ShoppingCart, FileText, LogOut, Users, Home } from 'lucide-react';
 import Login from './components/Login';
@@ -14,18 +14,20 @@ import apiClient from './services/api';
 function App() {
   const { isAuthenticated, login, logout } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [books, setBooks] = useState([]);  
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
 
   // Auto-close sidebar on mobile when view changes
-  useEffect(() => {
+  const handleNavClick = (view) => {
+    setCurrentView(view);
+    // Always close sidebar on mobile after navigation
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
-  }, [currentView]);
+  };
 
   // Handle window resize
   useEffect(() => {
@@ -109,6 +111,7 @@ function App() {
     logout();
     setCurrentView('dashboard');
     setUserInfo(null);
+    setSidebarOpen(false);
   };
 
   const getRoleDisplay = (role) => {
@@ -121,21 +124,13 @@ function App() {
     return roleMap[role] || role;
   };
 
-  const handleNavClick = (view) => {
-    setCurrentView(view);
-    // Close sidebar on mobile after navigation
-    if (window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  };
-
   if (!isAuthenticated) {
     return <Login onLogin={login} />;
   }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay - Click to close sidebar */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
@@ -145,78 +140,77 @@ function App() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-blue-900 to-blue-950 text-white transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-blue-900 to-blue-950 text-white transform transition-transform duration-300 ease-in-out flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-blue-800">
-            <h1 className="text-xl lg:text-2xl font-bold">FRC Library POS</h1>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden hover:bg-blue-800 p-2 rounded-lg transition"
-            >
-              <X size={24} />
-            </button>
-          </div>
-          
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            <button
-              onClick={() => handleNavClick('dashboard')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
-                currentView === 'dashboard' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
-              }`}
-            >
-              <Home size={20} />
-              <span className="font-medium">Dashboard</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavClick('inventory')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
-                currentView === 'inventory' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
-              }`}
-            >
-              <Package size={20} />
-              <span className="font-medium">Inventory</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavClick('billing')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
-                currentView === 'billing' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
-              }`}
-            >
-              <ShoppingCart size={20} />
-              <span className="font-medium">Billing</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavClick('reports')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
-                currentView === 'reports' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
-              }`}
-            >
-              <FileText size={20} />
-              <span className="font-medium">Reports</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavClick('analytics')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
-                currentView === 'analytics' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
-              }`}
-            >
-              <BarChart3 size={20} />
-              <span className="font-medium">Analytics</span>
-            </button>
-          </nav>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-blue-800 flex-shrink-0">
+          <h1 className="text-xl lg:text-2xl font-bold">FRC Library POS</h1>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden hover:bg-blue-800 p-2 rounded-lg transition"
+            aria-label="Close menu"
+          >
+            <X size={24} />
+          </button>
         </div>
         
-        {/* User Info & Logout */}
-        <div className="p-4 border-t border-blue-800 bg-blue-950">
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <button
+            onClick={() => handleNavClick('dashboard')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
+              currentView === 'dashboard' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
+            }`}
+          >
+            <Home size={20} />
+            <span className="font-medium">Dashboard</span>
+          </button>
+          
+          <button
+            onClick={() => handleNavClick('inventory')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
+              currentView === 'inventory' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
+            }`}
+          >
+            <Package size={20} />
+            <span className="font-medium">Inventory</span>
+          </button>
+          
+          <button
+            onClick={() => handleNavClick('billing')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
+              currentView === 'billing' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
+            }`}
+          >
+            <ShoppingCart size={20} />
+            <span className="font-medium">Billing</span>
+          </button>
+          
+          <button
+            onClick={() => handleNavClick('reports')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
+              currentView === 'reports' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
+            }`}
+          >
+            <FileText size={20} />
+            <span className="font-medium">Reports</span>
+          </button>
+          
+          <button
+            onClick={() => handleNavClick('analytics')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
+              currentView === 'analytics' ? 'bg-blue-800 shadow-lg' : 'hover:bg-blue-800'
+            }`}
+          >
+            <BarChart3 size={20} />
+            <span className="font-medium">Analytics</span>
+          </button>
+        </nav>
+        
+        {/* User Info & Logout - Fixed positioning at bottom */}
+        <div className="p-4 border-t border-blue-800 bg-blue-950 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-3">
             <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center flex-shrink-0">
               <Users size={20} />
@@ -243,10 +237,11 @@ function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header */}
-        <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
+            aria-label="Open menu"
           >
             <Menu size={24} className="text-gray-700" />
           </button>
