@@ -50,3 +50,306 @@ body {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+  /* Minimum touch target size of 44x44px */
+  button, 
+  a, 
+  input[type="checkbox"], 
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Larger input fields for easier typing */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    padding: 12px 16px;
+  }
+
+  /* Improve table readability on mobile */
+  table {
+    font-size: 14px;
+  }
+
+  table th,
+  table td {
+    padding: 12px 8px;
+  }
+
+  /* Stack cards vertically on mobile */
+  .grid {
+    gap: 1rem;
+  }
+
+  /* Full-width buttons on mobile */
+  .modal button[type="submit"],
+  .form button[type="submit"] {
+    width: 100%;
+  }
+
+  /* Improve scroll on mobile */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Sticky headers */
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+  }
+
+  /* Better spacing for mobile cards */
+  .card,
+  .bg-white {
+    margin-bottom: 1rem;
+  }
+
+  /* Improve modal sizing on mobile */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+
+  /* Better number input on mobile */
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+/* ========================================
+   TABLET OPTIMIZATION (768px - 1024px)
+   ======================================== */
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Optimize grid layouts for tablets */
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Adjust sidebar width for tablets */
+  .sidebar {
+    width: 200px;
+  }
+
+  /* Better table layout on tablets */
+  table th,
+  table td {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* ========================================
+   SMALL MOBILE (< 375px)
+   ======================================== */
+
+@media (max-width: 374px) {
+  /* Extra small text for tiny screens */
+  body {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Reduce padding on small screens */
+  .p-8 {
+    padding: 1rem;
+  }
+
+  .p-6 {
+    padding: 0.75rem;
+  }
+
+  /* Compact buttons */
+  button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+}
+
+/* ========================================
+   LANDSCAPE MOBILE
+   ======================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Optimize for landscape mode */
+  .h-screen {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+
+  /* Reduce header size in landscape */
+  header {
+    padding: 0.5rem 1rem;
+  }
+
+  /* Compact navigation */
+  nav button {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* ========================================
+   TOUCH IMPROVEMENTS
+   ======================================== */
+
+/* Remove hover effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  button:hover,
+  a:hover {
+    transform: none;
+  }
+
+  /* Add active states instead */
+  button:active,
+  a:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+/* Improve focus indicators for keyboard navigation */
+*:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Better focus for touch devices */
+@media (hover: none) {
+  *:focus {
+    outline: 3px solid #3b82f6;
+  }
+}
+
+/* ========================================
+   PERFORMANCE
+   ======================================== */
+
+/* Enable GPU acceleration for smooth animations */
+.transition,
+.transform {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ========================================
+   SAFE AREA (for iPhone notches)
+   ======================================== */
+
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+
+  /* Adjust header for notch */
+  header {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+}
+
+/* ========================================
+   MOBILE-SPECIFIC UTILITIES
+   ======================================== */
+
+/* Hide on mobile */
+.mobile-hidden {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-hidden {
+    display: block;
+  }
+}
+
+/* Show only on mobile */
+.mobile-only {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none;
+  }
+}
+
+/* Prevent text selection on UI elements */
+button,
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+  /* Hide navigation and non-essential elements */
+  aside,
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Optimize for print */
+  body {
+    background: white;
+    color: black;
+  }
+
+  /* Prevent page breaks inside elements */
+  tr,
+  .card {
+    page-break-inside: avoid;
+  }
+}
