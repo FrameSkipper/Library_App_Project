@@ -7,11 +7,11 @@ import Inventory from './components/Inventory';
 import Billing from './components/Billing';
 import Reports from './components/Reports';
 import Analytics from './components/Analytics';
-import SyncStatus from './components/SyncStatus';  // ← ADD THIS
+import SyncStatus from './components/SyncStatus';
 import { useAuth } from './hooks/useAuth';
 import { booksAPI, publishersAPI } from './services/api';
 import apiClient from './services/api';
-import offlineAPI from './services/offlineApi';  // ← ADD THIS
+import offlineAPI from './services/offlineAPI';
 
 function App() {
   const { isAuthenticated, login, logout } = useAuth();
@@ -22,6 +22,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
 
+  // Initialize offline database
   useEffect(() => {
     const initOffline = async () => {
       try {
@@ -44,17 +45,14 @@ function App() {
 
   const loadUserInfo = async () => {
     try {
-      // Fetch current user's staff profile
       const response = await apiClient.get('/staff/');
       const staffData = response.data.results || response.data;
       
-      // Get the JWT token to find the user ID
       const token = localStorage.getItem('access_token');
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const userId = payload.user_id;
         
-        // Find the staff profile for the current user
         const currentUserStaff = Array.isArray(staffData) 
           ? staffData.find(staff => staff.user === userId)
           : null;
@@ -69,7 +67,6 @@ function App() {
       }
     } catch (error) {
       console.error('Error loading user info:', error);
-      // Fallback to default if we can't load user info
       setUserInfo({
         name: 'User',
         role: 'CLERK',
@@ -78,46 +75,28 @@ function App() {
     }
   };
 
-const loadData = async () => {
-  setLoading(true);
-  try {
-    console.log('📄 Loading data...');
-    
-    const [booksData, publishersData] = await Promise.all([
-      booksAPI.getAll(),
-      publishersAPI.getAll(),
-    ]);
-    
-    console.log('📚 Books loaded:', booksData);
-    console.log('🏢 Publishers loaded:', publishersData);
-    
-    setBooks(booksData);
-    setPublishers(publishersData);
-    
-    console.log('✅ State updated');
-  } catch (error) {
-    console.error('❌ Error loading data:', error);
-    alert('Failed to load data: ' + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleLogout = () => {
-    logout();
-    setCurrentView('dashboard');
-    setUserInfo(null);
-  };
-
-  // Helper function to display role nicely
-  const getRoleDisplay = (role) => {
-    const roleMap = {
-      'ADMIN': 'Administrator',
-      'MANAGER': 'Manager',
-      'CLERK': 'Clerk',
-      'DOCUMENTALIST': 'Documentalist'
-    };
-    return roleMap[role] || role;
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      console.log('📄 Loading data...');
+      
+      const [booksData, publishersData] = await Promise.all([
+        booksAPI.getAll(),
+        publishersAPI.getAll(),
+      ]);
+      
+      console.log('📚 Books loaded:', booksData);
+      console.log('🏢 Publishers loaded:', publishersData);
+      
+      setBooks(booksData);
+      setPublishers(publishersData);
+      
+      console.log('✅ State updated');
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isAuthenticated) {
@@ -125,18 +104,25 @@ const loadData = async () => {
   }
 
   return (
-    <>
-    <InstallPrompt />
-    <OfflineIndicator />
     <div className="flex h-screen bg-gray-50">
-      <div className="flex h-screen bg-gray-50">
-      
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-blue-900 text-white transition-all duration-300 overflow-hidden relative`}>
-        <div className="p-4">
-          <h1 className="text-2xl font-bold mb-8">FRC Library POS</h1>
+      <div
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-blue-900 to-blue-950 text-white transform transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0`}
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between p-6 border-b border-blue-800">
+            <h1 className="text-2xl font-bold">FRC Library POS</h1>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden hover:bg-blue-800 p-2 rounded"
+            >
+              <X size={24} />
+            </button>
+          </div>
           
-          <nav className="space-y-2">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             <button
               onClick={() => setCurrentView('dashboard')}
               className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
@@ -176,87 +162,84 @@ const loadData = async () => {
               <FileText size={20} />
               <span>Reports</span>
             </button>
+            
             <button
-                onClick={() => setCurrentView('analytics')}
-                className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
-                  currentView === 'analytics' ? 'bg-blue-800' : 'hover:bg-blue-800'
-                }`}
-              >
-                <BarChart3 size={20} />
-                <span>Analytics</span>
+              onClick={() => setCurrentView('analytics')}
+              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition ${
+                currentView === 'analytics' ? 'bg-blue-800' : 'hover:bg-blue-800'
+              }`}
+            >
+              <BarChart3 size={20} />
+              <span>Analytics</span>
             </button>
           </nav>
-        </div>
-        
-        <div className="absolute bottom-0 w-64 p-4 border-t border-blue-800">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center">
-              <Users size={20} />
-            </div>
-            <div className="flex-1">
-              <div className="font-medium text-sm">
-                {userInfo ? userInfo.name : 'Loading...'}
+          
+          <div className="p-4 border-t border-blue-800">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center">
+                <Users size={20} />
               </div>
-              <div className="text-xs text-blue-300">
-                {userInfo ? getRoleDisplay(userInfo.role) : ''}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm truncate">
+                  {userInfo ? userInfo.name : 'Loading...'}
+                </div>
+                <div className="text-xs text-blue-300 truncate">
+                  {userInfo ? userInfo.role : ''}
+                </div>
               </div>
             </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center space-x-2 p-3 bg-blue-800 hover:bg-blue-700 rounded-lg transition"
+            >
+              <LogOut size={20} />
+              <span>Logout</span>
+            </button>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center space-x-2 p-2 bg-blue-800 rounded-lg hover:bg-blue-700 transition"
-          >
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm z-10">
-          <div className="flex items-center justify-between p-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-            
-            <h2 className="text-2xl font-bold text-gray-800">
-              {currentView === 'dashboard' && 'Dashboard'}
-              {currentView === 'inventory' && 'Inventory Management'}
-              {currentView === 'billing' && 'Billing & Sales'}
-              {currentView === 'reports' && 'Reports & Transactions'}
-              {currentView === 'analytics' && 'Analytics'}
-            </h2>
-            
-            <div className="w-10"></div>
-          </div>
-        </header>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className={`fixed top-4 left-4 z-20 lg:hidden bg-blue-900 text-white p-2 rounded-lg shadow-lg ${
+          sidebarOpen ? 'hidden' : 'block'
+        }`}
+      >
+        <Menu size={24} />
+      </button>
 
-        <main className="flex-1 overflow-y-auto p-6">
+      {/* Main content area */}
+      <div className="flex-1 lg:ml-64">
+        <main className="h-full overflow-auto">
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <div className="spinner"></div>
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading...</p>
+              </div>
             </div>
           ) : (
             <>
               {currentView === 'dashboard' && (
-                <Dashboard books={books} onRefresh={loadData} />
+                <Dashboard books={books} publishers={publishers} />
               )}
               {currentView === 'inventory' && (
                 <Inventory 
                   books={books} 
-                  publishers={publishers}
-                  onRefresh={loadData} 
+                  publishers={publishers} 
+                  onBooksUpdate={loadData}
                 />
               )}
               {currentView === 'billing' && (
-                <Billing books={books} onRefresh={loadData} />
+                <Billing 
+                  books={books} 
+                  publishers={publishers}
+                  onTransactionComplete={loadData}
+                />
               )}
               {currentView === 'reports' && (
-                <Reports />
+                <Reports books={books} />
               )}
               {currentView === 'analytics' && (
                 <Analytics />
@@ -265,11 +248,11 @@ const loadData = async () => {
           )}
         </main>
       </div>
+
+      {/* Sync Status Indicator */}
+      {isAuthenticated && <SyncStatus />}
     </div>
-    {isAuthenticated && <SyncStatus />}
-    </div>
-  </>
   );
 }
 
-export default App;// Force rebuild Mon, Nov 24, 2025 11:00:19 PM
+export default App;
