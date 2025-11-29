@@ -10,7 +10,7 @@ import {
   RefreshCw,
   BarChart3
 } from 'lucide-react';
-import { analyticsAPI, transactionsAPI, booksAPI } from '../services/api';
+import { booksAPI, publishersAPI, transactionsAPI } from '../services/offlineApi';
 
 function Analytics() {
   const [loading, setLoading] = useState(true);

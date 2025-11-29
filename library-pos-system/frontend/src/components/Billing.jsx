@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, ShoppingCart, X, Plus, Minus, CreditCard, Printer } from 'lucide-react';
-import { transactionsAPI } from '../services/api';
+import { booksAPI, publishersAPI, transactionsAPI } from '../services/offlineApi';
 
 function Billing({ books = [], onRefresh }) {
   const [searchTerm, setSearchTerm] = useState('');

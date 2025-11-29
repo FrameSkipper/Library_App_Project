@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, BarChart3, FileText, AlertTriangle, TrendingUp, DollarSign } from 'lucide-react';
-import { booksAPI, transactionsAPI } from '../services/api';
+import { booksAPI, publishersAPI, transactionsAPI } from '../services/offlineApi';
 
 function Dashboard({ books, onRefresh }) {
   const [stats, setStats] = useState({
