@@ -6,12 +6,12 @@ import Dashboard from './components/Dashboard';
 import Inventory from './components/Inventory';
 import Billing from './components/Billing';
 import Reports from './components/Reports';
+import Analytics from './components/Analytics';
+import SyncStatus from './components/SyncStatus';  // ← ADD THIS
 import { useAuth } from './hooks/useAuth';
 import { booksAPI, publishersAPI } from './services/api';
 import apiClient from './services/api';
-import Analytics from './components/Analytics';
-import InstallPrompt from './components/InstallPrompt';
-import OfflineIndicator from './components/OfflineIndicator';
+import offlineAPI from './services/offlineApi';  // ← ADD THIS
 
 function App() {
   const { isAuthenticated, login, logout } = useAuth();
@@ -21,6 +21,19 @@ function App() {
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
+
+  useEffect(() => {
+    const initOffline = async () => {
+      try {
+        await offlineAPI.init();
+        console.log('✅ Offline mode initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize offline mode:', error);
+      }
+    };
+
+    initOffline();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -253,6 +266,7 @@ const loadData = async () => {
         </main>
       </div>
     </div>
+    {isAuthenticated && <SyncStatus />}
     </div>
   </>
   );
