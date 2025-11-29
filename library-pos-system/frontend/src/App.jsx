@@ -10,7 +10,6 @@ import Analytics from './components/Analytics';
 import OfflineIndicator from './components/OfflineIndicator';
 import { useAuth } from './hooks/useAuth';
 import { booksAPI, publishersAPI } from './services/offlineApi';
-import apiClient from './services/api';
 import syncManager from './utils/syncManager';
 
 function App() {
