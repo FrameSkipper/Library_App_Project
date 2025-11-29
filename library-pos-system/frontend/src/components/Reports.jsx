@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, DollarSign, ShoppingCart, TrendingUp, Calendar, User, Download } from 'lucide-react';
-import { booksAPI, publishersAPI, transactionsAPI } from '../services/offlineApi';
+import { transactionsAPI } from '../services/api';
 
 function Reports() {
   const [transactions, setTransactions] = useState([]);

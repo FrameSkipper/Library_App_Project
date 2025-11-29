@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Package, AlertCircle } from 'lucide-react';
-import { booksAPI, publishersAPI, transactionsAPI } from '../services/offlineApi';
+import { booksAPI, publishersAPI } from '../services/api';
 
 function Inventory({ books = [], publishers = [], onRefresh }) {  // Add default values
   const [searchTerm, setSearchTerm] = useState('');
