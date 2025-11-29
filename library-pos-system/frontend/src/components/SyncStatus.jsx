@@ -1,7 +1,7 @@
 // frontend/src/components/SyncStatus.jsx
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, RefreshCw, CheckCircle, Clock } from 'lucide-react';
-import offlineAPI from '../services/offlineApi';
+import offlineAPI from '../services/offlineAPI';
 
 function SyncStatus() {
   const [status, setStatus] = useState({
