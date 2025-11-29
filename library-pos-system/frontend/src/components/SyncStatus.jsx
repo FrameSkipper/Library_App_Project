@@ -80,52 +80,52 @@ function SyncStatus() {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 z-50">
+    <div className="fixed bottom-20 left-4 z-40">
       <div className={`
-        bg-white rounded-lg shadow-lg border-2 px-4 py-2 flex items-center gap-3 transition-all
+        bg-white rounded-lg shadow-lg border-2 px-3 py-2 flex items-center gap-2 transition-all text-sm
         ${status.isOnline ? 'border-green-500' : 'border-orange-500'}
       `}>
         {/* Online/Offline Indicator */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {status.isOnline ? (
             <>
-              <Wifi size={20} className="text-green-600" />
-              <span className="text-sm font-medium text-green-700">Online</span>
+              <Wifi size={16} className="text-green-600" />
+              <span className="text-xs font-medium text-green-700">Online</span>
             </>
           ) : (
             <>
-              <WifiOff size={20} className="text-orange-600" />
-              <span className="text-sm font-medium text-orange-700">Offline</span>
+              <WifiOff size={16} className="text-orange-600" />
+              <span className="text-xs font-medium text-orange-700">Offline</span>
             </>
           )}
         </div>
 
-        <div className="h-6 w-px bg-gray-300"></div>
+        <div className="h-5 w-px bg-gray-300"></div>
 
         {/* Sync Status */}
         {status.isSyncing ? (
-          <div className="flex items-center gap-2">
-            <RefreshCw size={16} className="text-blue-600 animate-spin" />
-            <span className="text-sm text-gray-700">Syncing...</span>
+          <div className="flex items-center gap-1.5">
+            <RefreshCw size={14} className="text-blue-600 animate-spin" />
+            <span className="text-xs text-gray-700">Syncing...</span>
           </div>
         ) : status.hasPendingChanges ? (
-          <div className="flex items-center gap-2">
-            <Clock size={16} className="text-orange-600" />
-            <span className="text-sm text-gray-700">
+          <div className="flex items-center gap-1.5">
+            <Clock size={14} className="text-orange-600" />
+            <span className="text-xs text-gray-700">
               {status.pendingOperations} pending
             </span>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <CheckCircle size={16} className="text-green-600" />
-            <span className="text-sm text-gray-700">Synced</span>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle size={14} className="text-green-600" />
+            <span className="text-xs text-gray-700">Synced</span>
           </div>
         )}
 
         {/* Last Sync Time */}
         {status.lastSync && (
           <>
-            <div className="h-6 w-px bg-gray-300"></div>
+            <div className="h-5 w-px bg-gray-300"></div>
             <span className="text-xs text-gray-500">
               {formatLastSync(status.lastSync)}
             </span>
@@ -135,13 +135,13 @@ function SyncStatus() {
         {/* Manual Sync Button */}
         {status.isOnline && !status.isSyncing && (
           <>
-            <div className="h-6 w-px bg-gray-300"></div>
+            <div className="h-5 w-px bg-gray-300"></div>
             <button
               onClick={handleManualSync}
               className="p-1 hover:bg-gray-100 rounded transition"
               title="Manual sync"
             >
-              <RefreshCw size={16} className="text-gray-600" />
+              <RefreshCw size={14} className="text-gray-600" />
             </button>
           </>
         )}
