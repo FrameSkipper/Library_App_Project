@@ -7,11 +7,12 @@ import Inventory from './components/Inventory';
 import Billing from './components/Billing';
 import Reports from './components/Reports';
 import Analytics from './components/Analytics';
-import SyncStatus from './components/SyncStatus';
 import { useAuth } from './hooks/useAuth';
 import { booksAPI, publishersAPI } from './services/api';
 import apiClient from './services/api';
-import offlineAPI from './services/offlineAPI';
+import InstallPrompt from './components/InstallPrompt';
+
+
 
 function App() {
   const { isAuthenticated, login, logout } = useAuth();
@@ -21,20 +22,6 @@ function App() {
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
-
-  // Initialize offline database
-  useEffect(() => {
-    const initOffline = async () => {
-      try {
-        await offlineAPI.init();
-        console.log('✅ Offline mode initialized');
-      } catch (error) {
-        console.error('❌ Failed to initialize offline mode:', error);
-      }
-    };
-
-    initOffline();
-  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -248,9 +235,7 @@ function App() {
           )}
         </main>
       </div>
-
-      {/* Sync Status Indicator */}
-      {isAuthenticated && <SyncStatus />}
+      {isAuthenticated && <InstallPrompt />}
     </div>
   );
 }

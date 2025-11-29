@@ -1,3 +1,4 @@
+// frontend/src/components/InstallPrompt.jsx
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 
@@ -6,67 +7,103 @@ function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    const handler = (e) => {
+    // Listen for the beforeinstallprompt event
+    const handleBeforeInstall = (e) => {
+      // Prevent the default install prompt
       e.preventDefault();
+      // Save the event for later use
       setDeferredPrompt(e);
+      // Show our custom install button
       setShowPrompt(true);
+      console.log('📱 Install prompt available');
     };
 
-    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      console.log('✅ App already installed');
+      setShowPrompt(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      console.log('❌ No install prompt available');
+      return;
+    }
 
+    // Show the install prompt
     deferredPrompt.prompt();
+
+    // Wait for the user's response
     const { outcome } = await deferredPrompt.userChoice;
     
     console.log(`User response: ${outcome}`);
+
+    if (outcome === 'accepted') {
+      console.log('✅ User accepted the install prompt');
+    } else {
+      console.log('❌ User dismissed the install prompt');
+    }
+
+    // Clear the prompt
     setDeferredPrompt(null);
     setShowPrompt(false);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa-prompt-dismissed', Date.now());
+    // Remember dismissal for this session
+    sessionStorage.setItem('installPromptDismissed', 'true');
   };
 
-  if (!showPrompt) return null;
+  // Don't show if dismissed this session
+  if (sessionStorage.getItem('installPromptDismissed')) {
+    return null;
+  }
+
+  if (!showPrompt) {
+    return null;
+  }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg max-w-sm border border-gray-200 z-50">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2">
-          <Download className="text-blue-600" size={24} />
-          <h3 className="font-bold text-gray-900">Install App</h3>
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg shadow-2xl p-4 animate-slide-up">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Download size={24} className="flex-shrink-0" />
+            <div>
+              <h3 className="font-bold text-lg">Install FRC Library POS</h3>
+              <p className="text-sm text-blue-100">For quick access and offline use</p>
+            </div>
+          </div>
+          <button
+            onClick={handleDismiss}
+            className="text-white hover:bg-blue-800 p-1 rounded transition"
+          >
+            <X size={20} />
+          </button>
         </div>
-        <button
-          onClick={handleDismiss}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          <X size={20} />
-        </button>
-      </div>
-      
-      <p className="text-sm text-gray-600 mb-4">
-        Install FRC Library POS for quick access and offline functionality!
-      </p>
-      
-      <div className="flex gap-2">
-        <button
-          onClick={handleInstall}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-        >
-          Install
-        </button>
-        <button
-          onClick={handleDismiss}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-        >
-          Later
-        </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleInstallClick}
+            className="flex-1 bg-white text-blue-700 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition"
+          >
+            Install App
+          </button>
+          <button
+            onClick={handleDismiss}
+            className="px-4 py-2 text-white hover:bg-blue-800 rounded-lg transition"
+          >
+            Not Now
+          </button>
+        </div>
       </div>
     </div>
   );
